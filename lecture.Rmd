@@ -10,340 +10,467 @@ output:
     theme: cerule
 ---
 
+
+
+# Milgram Experiments
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/xOYLCy5PVgM" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+- After WWII, and the revelations of what had happened in Nazi Germany, and Imperial Japan, many Americas wanted to understand how and why people would commit such atrocities.
+- This is a fair question, and not one which we can fully answer today, although recent events and rhetoric dehumanizing political opponents should give us all pause.
+- Stanley Milgram, a Yale university professor designed a study to test the willingness of Americans to obey a authority figure.
+    - Test subjects were told they were helping develop a new learning technique.
+    - They were further told that no harm would come to anyone participating in the study.
+    - Milgram (and others) performed hundreds of variations all over the planet, with largely consistent results.
+    - This is arguably one of the best validated and reproduced psychological studies of all time.
+
+```{r echo=FALSE}
+url <- "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Milgram_experiment_v2.svg/378px-Milgram_experiment_v2.svg.png"
+knitr::include_graphics(url)
+```
+
+> The Study (from Wikipedia):
+> - "Experimenter" (E), who was in charge of the session.
+> - "Teacher" (T), a volunteer for a single session. The "teachers" were led to believe that they were merely assisting, whereas they were actually the subjects of the experiment.
+> - "Learner" (L), an actor and a confederate of the experimenter, who pretended to be a volunteer.
+> 
+> The subject and the actor arrived at the session together. The experimenter told them that they were taking part in "a scientific study of memory and learning", to see what the effect of punishment is on a subject's ability to memorize content. Also, he always clarified that the payment for their participation in the experiment was secured regardless of its development. The subject and actor drew slips of paper to determine their roles. Unknown to the subject, both slips said "teacher". The actor would always claim to have drawn the slip that read "learner", thus guaranteeing that the subject would always be the "teacher".
+> 
+> Next, the teacher and learner were taken into an adjacent room where the learner was strapped into what appeared to be an electric chair. The experimenter, dressed in a lab coat in order to appear to have more authority, told the participants this was to ensure that the learner would not escape. In a later variation of the experiment, the confederate would eventually plead for mercy and yell that he had a heart condition. At some point prior to the actual test, the teacher was given a sample electric shock from the electroshock generator in order to experience firsthand what the shock that the learner would supposedly receive during the experiment would feel like.
+> 
+> The teacher and learner were then separated so that they could communicate, but not see each other. The teacher was then given a list of word pairs that he was to teach the learner. The teacher began by reading the list of word pairs to the learner. The teacher would then read the first word of each pair and read four possible answers. The learner would press a button to indicate his response. If the answer was incorrect, the teacher would administer a shock to the learner, with the voltage increasing in 15-volt increments for each wrong answer (if correct, the teacher would read the next word pair.) The volts ranged from 15 to 450. The shock generator included verbal markings that vary from Slight Shock to Danger: Severe Shock.
+> 
+> The subjects believed that for each wrong answer the learner was receiving actual shocks. In reality, there were no shocks. After the learner was separated from the teacher, the learner set up a tape recorder integrated with the electroshock generator, which played pre recorded sounds for each shock level. As the voltage of the fake shocks increased, the learner began making audible protests, such as banging repeatedly on the wall that separated him from the teacher. In every condition the learner makes/says a predetermined sound or word. When the highest voltages were reached, the learner fell silent.
+> 
+> If at any time the teacher indicated a desire to halt the experiment, the experimenter was instructed to give specific verbal prods. The prods were, in this order:
+> 
+> 1. Please continue or Please go on.
+> 2. The experiment requires that you continue.
+> 3. It is absolutely essential that you continue.
+> 4. You have no other choice; you must go on.
+> 
+> Prod 2 could only be used if prod 1 was unsuccessful. If the subject still wished to stop after all four successive verbal prods, the experiment was halted. Otherwise, the experiment was halted after the subject had elicited the maximum 450-volt shock three times in succession.
+> 
+> The experimenter also had prods to use if the teacher made specific comments. If the teacher asked whether the learner might suffer permanent physical harm, the experimenter replied, "Although the shocks may be painful, there is no permanent tissue damage, so please go on." If the teacher said that the learner clearly wants to stop, the experimenter replied, "Whether the learner likes it or not, you must go on until he has learned all the word pairs correctly, so please go on."
+
+## Milgram - Villain or Hero?
+
+- Have you heard of Milgram before?
+- Milgram's experiments are often used in research ethics discussions as an example of what NOT to do.
+- But _one important_ thing Milgram got right was that he repeated his experiment more than once.
+    - In fact, he repeated it hundreds of times.
+    - He didn't simply want to get published. He wanted to understand if the psychology of Nazi Germany was unique or if other groups could fall victim to a similar psychology.
+        - I must assume he had not read about Imperial Japan, the Russian Communist Revolution, the French Revolution, etc?
+        - History has, unfortunately, provided us with a wealth of data on this topic.
+
+
+
 # Setup
 
 ```{r}
-library(rpart)
-library(rpart.plot)
 library(knitr)
-library(modelr)
 library(tidyverse)
-train <- read_csv("data/train_clean.csv")
-train
+titanic <- read_csv("data/titanic-train-clean.csv") %>%
+  mutate(died = !survived) %>%
+  select(-survived)
 ```
 
 
 # Types of models
 
-- For our purposes, we can divide statistical models into two large camps.
-- Predictions of:
-    1. Continuous variables (linear regression, generalized additive)
-    2. Categorical variables (logistic regression, decision trees, random forests) 
-- And we have talked briefly about both although we have spent more time on the linear modeling.
+For our purposes, we can divide statistical models into two large camps.
 
-## Linear Review
+1. Linear
+2. Categorical/Classification
 
-```{r}
-data(diamonds)
-diamonds <- 
-  diamonds %>%
-  mutate(lcarat = log(carat), lprice = log(price))
-linear_model <- lm(lprice~lcarat, data = diamonds)
-summary(linear_model)
-```
+And although intro to statistics classes focus on the former, the latter is every bit as important. Examples:
 
-```{r}
-demo <- sample_n(diamonds, 100)
-demo <- add_predictions(demo, linear_model)
-demo %>% 
-  arrange(pred) %>%
-  ggplot(aes(x = lcarat, y = lprice)) +
-  geom_point() +
-  geom_line(aes(y = pred), color = "blue")
-```
-
-- Residuals should be normally distributed.
-- All else being equal, smaller residuals are a good thing.
-- We used our linear model to:
-    - Better understand factors which influence a diamonds price (size matters)
-    - And we were able to use it to make reasonably useful predictions regarding how much a diamond would cost.
-- We don't need to worry about this any more tonight, so we will delete the data.
-
-```{r}
-rm(demo, diamonds, linear_model)
-```
+- Who is at risk of having a heart attach?
+- Which credit card application is most likely to default?
+- Which student is likely to graduate/drop-out?
 
 
-## Categorical
 
-- To discuss categorical models, I will introduce you to one of my favorite data sets: Titanic.
-- This data can be used to understand risk factors and outcomes related to . . . drowning . .. on the night HMS Titanic sank.
+# A Titanic classification problem
 
-```{r}
-train %>%
-  group_by(survived) %>%
-  summarize(n = n()) %>%
-  mutate(p = round(n/sum(n)*100,2))
-```
+- We will use a data set based on the sinking of the Titanic tonight.
+- Can we figure out which passengers were most at risk of dieing?
+- Can we use build a model to:
+    - understand risk factors for drowning
+    - predict which passengers will drown
 
-- HMS Titanic sunk on 15 April 1912 after bumping not so gently into an iceberg.
-- Passenger vessels such as Titanic were largely viewed as unsinkable, and thus did not carry enough lifeboats to save everyone on-board.
-- Lifeboats were actually viewed as a tool to aid shuttling passengers from a stricken ship to a rescue vessel and not as a primary means of keeping people out of the ocean.
+Hint: The answer to both is yes.
+
+## A little history
+
+- HMS Titanic sunk on 15 April 1912 after "bumping" into an iceberg.
+- In the early 20th century such ships did not carry enough lifeboats to save everyone.
+- Lifeboats were viewed as a tool to aid shuttling passengers from a stricken ship to a rescue vessel and not as a primary means of keeping people out of the ocean.
     - A stricken ship could be one with a mechanical breakdown, etc.
-    - This lax attitude towards lifeboats would start to shift because of this and other disasters.
-- And I'm sure you have all heard the phrase "women and children first".
+    - The horrible loss of life caused by the sinking of Titanic contributed to a changing attitude.
+- I'm sure you have all heard the phrase "women and children first".
     - Tonight we will put this adage to the test.
     - Were women and children more likely to survive?
-- And I want you to answer this immediate question.
-    - I'm trying to kill all the suspense here.
+- Epidemiology likes to talk about risk. So we will talk about risk.
+    - Which passengers had the most risk?
+
+## Question/Answer: Exploring Titanic data
+
+My original plan was to have you all complete these during class, but since I canceled things, I decided to just give you the answers.
+
+- Question: What percentage of passengers in this data set died?
+- Answer: Roughly 62 percent of passengers died.
+
+There are two ways to approach this. The second method is more useful later on.
 
 ```{r}
-## Were women more likely to survive?
+## This works . . . 
+titanic %>%
+  count(died) %>%
+  mutate(p = round(100*n/nrow(titanic),1))
 
-```
-
-```{r}
-## Were children more likely to survive?
-
-```
-
-- Good job! (Or not if you just sat there staring at your fingers.)
-- And, if you recall, we discussed the connection to logistic regression via the odds ratio.
-
-```{r}
-odds <- 
-  train %>% 
-  group_by(sex) %>%
+## But this approach is more useful later.
+## Look at this carefully.
+titanic %>%
   summarize(
-    survived = sum(survived),
-    died = n() - sum(survived),
-    total = n()
-  ) %>%
-  mutate(
-    risk_survived = survived/total,
-    odds_survived = survived/died
-         )
-odds
-```
-
-So let's talk about these odd `odds_survived`.
-    - female: For every woman who died, 2.87 women survived.
-    - male: For every man who died, .23 men survived.
-    - Being male that night was unhealthy.
-    - And we can test this logic out.s
-    
-```{r}
-## Females: For every woman who died (81), 2.88 women lived.
-## Since we rounded our odds, we overshoot the number of survived slightly, but you get the idea here.
-81 * 2.88
-```
-
-- OK, that's grand. And we can use this to calculate the odds ratio between the two groups.
-- Which simply reinforces our narrative.
-
-```{r}
-include_graphics("includes/this_is_fine.jpg")
-odds %>% summarize(
-  odds_survived_female = odds_survived[sex == "female"],
-  odds_survived_male = odds_survived[sex == "male"],
-  odds_survived = odds_survived[sex == "female"]/odds_survived[sex == "male"],
-  risk_survived_female = risk_survived[sex == "female"],
-  risk_survived_male = risk_survived[sex == "male"],
-  risk_survived = risk_survived[sex == "female"]/risk_survived[sex == "male"]
+    n_died = sum(died),
+    n_passengers = n(),
+    ## Note how I reuse n_died and n_passengers here.
+    ## The round function just makes things easier to read.
+    ## See ?round for more info.
+    p_died = round(100*n_died/n_passengers,1)
   )
 ```
 
-- In epidemiology, odds are usually calculated on risk factors which increase the chance of disease.
-    - Thus, we are used to seeing a high odds ratio (and this _is_ high) as bad.
-    - But in this case, because we are modeling survival, a high odds ratio is protective.
-    - Also remember that a high odds ratio over states risk for frequent events.
-    - So while the odds are 12x, it is safer to say men were 4x more likely than women to die.
-- Of course, this can be done for children, and any other combination of factors as you like.
-- But perhaps there is some other way to think about this.
+Here's what I'm doing with these columns above:
 
+- n_died: The number of passengers who died. This is our numerator.
+- n_passengers: The total number of passengers, regardless of if they died or not.
+- p_died: This is the percentage of passengers who died. This is also known as risk. Groups of passengers with a higher p_died were at higher risk of drowning. And we explore just how this works.
+
+- Question: Was being male a risk factor for drowning?
+- Answer: YES
+
+This is why the second solution to the previous question is useful.
+
+```{r}
+## Reuse the code from above, but add a group_by statement.
+titanic %>%
+  group_by(sex) %>%
+  summarize(
+    n_died = sum(died),
+    n_passengers = n(),
+    p_died = round(100*n_died/n_passengers,1)
+  )
+```
+
+And we can see that over 80% of men died while only a little more than one out of four women died.
+
+- Question: Was being an adult a risk factor for drowning?
+- Answer: Yes
+
+Helpful Hint: The child column identifies children (1) and adults (0)
+
+```{r}
+## Again, we reuse the code from above, but add a group_by statement.
+titanic %>%
+  group_by(child) %>%
+  summarize(
+    n_died = sum(died),
+    n_passengers = n(),
+    p_died = round(100*n_died/n_passengers,1)
+  )
+```
+
+Again, we can see that nearly 2/3 adults died less than half of the children onboard the Titanic died. All of this goes to show there is some truth the classic phrase about women and children first.
+
+And we were able to calculate all of this using the dplyr skills learned earlier. And we could make this more complex. What if we wanted to model risk (
+
+
+
+## Risk v Odds
+
+Last week we (briefly) discussed the connection to logistic regression via the odds ratio. The code chunk below calculates the risk ratio and the odds ratio for dieing by gender. 
+
+```{r}
+## We are creating a new data set called ratios which we will use later.
+ratios <- 
+  titanic %>% 
+  group_by(sex) %>%
+  summarize(
+    died = sum(died),
+    survived = n() - sum(died),
+    total = n()
+  ) %>%
+  mutate(
+    risk_died = died/total,
+    odds_died = died/survived
+         )
+ratios
+```
+
+Explanation:
+
+- Risk: 81% of men died while only 26% of women died.
+- Odds: For every man who survived, over four men died. For every 3 wommen who survived, one died (roughly).
+- I did not convert risk into a percentage in the code for two reasons.
+    1. I want you to compare risk to odds and I don't want to make it any more complicated than necessary.
+    2. I want you to see how odds are higher than risk because the denominator is smaller. THIS IS IMPORTANT.
+    3. I want to use these values directly to calculate risk/odds ratios.
+
+```{r}
+## I know, this is a lot.
+include_graphics("includes/this_is_fine.jpg")
+```
+
+Last week we briefly touched on calculating risk ratio and odds ratio. Based on the results above, we can see clearly that men have a higher risk than women, but how much more risk?
+
+```{r}
+## This is why I made a new table called ratios.
+ratios %>%
+  summarize(
+    risk_died_female = risk_died[sex == "female"],
+    risk_died_male = risk_died[sex == "male"],
+    risk_died = risk_died[sex == "male"]/risk_died[sex == "female"],
+    odds_died_female = odds_died[sex == "female"],
+    odds_died_male = odds_died[sex == "male"],
+    odds_died = odds_died[sex == "male"]/odds_died[sex == "female"]
+  ) %>%
+  select(risk_died, odds_died)
+```
+
+In a scenario where most people died, the odds ratio is considerably larger than the risk ratio. But when the outcome modeled is rare, these two converge.
+
+Now we will explore a couple of SIMPLE classification "models" and how to assess the accuracy of our model.
 
 ## VERY SIMPLE MODEL: Everyone survives.
 
-- We have 891 rows in `train`.
-- If we just "predict" EVERYONE on Titanic survives, how accurate would this model be?
-- 341 people _did_ survive, and we would have gotten ALL of those answers right.
-- Our other 549 guesses are all wrong.
-- Introducing the confusion matrix!
-    - https://en.wikipedia.org/wiki/Confusion_matrix
+A classification model is a method of predicting which group someone (or something) belongs to. In this case, we want to build a model to predict who will die aboard the Titanic. Thus, we want to classify passengers into one of TWO groups:
 
-|              | Predicted Survived   | Predicted Not Survived  |
-|:------------:|:--------------------:|:-----------------------:|
-| Not Survived | FALSE POSITIVE (549) | TRUE NEGATIVE (0)       |
-|     Survived | TRUE POSITIVE (342)  | FALSE NEGATIVE (0)      | 
+1. died (drowned)
+2. survived (did not drown)
 
+But first we will build a very simple model. Our first model "predicts" that everyone will just die. It is a simplistic, naive model, but it is also right over 60% of the time. Think of this as a thought experiment and a demo of how things will work in the future, not as a serious exercise in modeling.
 
-- Our FALSE POSITIVES outnumber our TRUE POSITIVES.
-    - That is rarely OK. 
-- And our accuracy is just 342/891, which stinks.
-- A model based on flipping a coin would have been MORE accurate.
-    - Heads you live.
-    - Tails you die.
+- We have 891 rows in `titanic`.
+    - 549 people died, and we would have gotten ALL of those answers right.
+    - Our other 341 guesses are wrong.
 
+We will explore two ways to assess the accuracy our models. But involve comparing the number of right answers to the number of wrong answers. Since we predicted everyone died, we know were were right 61.6 percent of the time since 61.6 percent of passengers died. We were therefore wrong the other 38.4 percent of the time.
 
-## Simple model: All Women Survive
+But it is also useful to know "when" your model is wrong. And a classification model can be wrong in two ways. Our model might be wrong because it predicted someone died and they lived (FALSE POSITIVE) or it could be wrong because it predicted someone survived and they actually died (FALSE NEGATIVE). And when we put this into a table, we get something called a confusion matrix.
 
-- We know women are more likely to survive than men.
-    - Model the assumption that ALL women live and ALL men die.
-    - It is brutal, but because the odds of a woman surviving are 12x that of men, it actually kinda works.
-- This one, we won't do as a thought experiment. We'll write it out.
+Introducing the confusion matrix! https://en.wikipedia.org/wiki/Confusion_matrix
+
+| Actual   | Predicted Died       | Predicted Survived  |
+|:--------:|:--------------------:|:-------------------:|
+| Survived | FALSE POSITIVE (342) | TRUE NEGATIVE (0)   |
+|     Died | TRUE POSITIVE (549)  | FALSE NEGATIVE (0)  | 
+
+Because this first model predicts EVERYONE DIED, our model never has any TRUE or FALSE negatives. Take a look at that table.
+
+- You want to find ways to maximize TRUE POSITIVE and TRUE NEGATIVE.
+    - This classification model works by saying a member either belongs to the died group (positive) or that they survived (negative).
+    - TRUE POSITIVE: The model predicted the passenger would die, and they did.
+    - TRUE NEGATIVE: The model predicted the passenger would survive, and they did.
+- Accuracy is the sum of TRUE POSITIVE + TRUE NEGATIVE / TOTAL
+    - TRUE POSITIVE (549) + TRUE NEGATIVE (0) / TOTAL (891)
+    - Which is 61.6 percent.
+
+Let's build this model and the confusion matrix in R.
+
+1. We will create a new column in titanic called predicted which we will then compare to died.
+2. Because our first model predicts everyone dies, all values in predicted will be 1.
+3. We will then use dplyr to build a confusion matrix.
+
+```{r}
+## This creates a new column, predicted.
+## And gives is the value of 1 for all passengers.
+titanic <-
+  titanic %>%
+  mutate(predicted = 1)
+
+## This is our confusion matrix:
+titanic %>%
+  group_by(died) %>%
+  summarize(
+    predicted_died = sum(if_else(predicted == 1, 1, 0)),
+    predicted_survived = sum(if_else(predicted == 0, 1, 0))
+  )
+```
+
+As you can see, the labelig isn't quite as complex as above, but the numbers are identical.
+
+## Simple model 2: All Women Survive
+
+- Our data exploration earlier convincingly shows that women were more likely to survive than men.
+- Our second model assumes ALL women live and ALL men die.
+- And this time, we will only use R to do our work.
 
 ```{r}
 ## First, we make our prediction.
-train <- 
-  train %>%
-  mutate(pred_survived = case_when(sex == "female"~1, TRUE~0))
+## This will overwrite our work above.
+titanic <- 
+  titanic %>%
+  mutate(
+    ## Yes, I could have used if_else here.
+    ## I wanted to demonstrate the use of both commands.
+    predicted = case_when(sex == "male"~1, TRUE~0)
+  )
 
-## And then we assess it.
+## And then we assess our model.
+## Note: This is the same code I wrote previously.
+## But we are saving the results so we can reuse them.
 confusion <- 
-  train %>%
-  group_by(survived) %>%
-  summarise(pred_survived = sum(pred_survived),
-            pred_not_survived = n() - sum(pred_survived)
-            )
+  titanic %>%
+  group_by(died) %>%
+  summarize(
+    predicted_died = sum(if_else(predicted == 1, 1, 0)),
+    predicted_survived = sum(if_else(predicted == 0, 1, 0))
+  )
 confusion
 ```
 
-|              | Predicted Survived   | Predicted Not Survived  |
-|:------------:|:--------------------:|:-----------------------:|
-| Not Survived | FALSE POSITIVE (81)  | TRUE NEGATIVE (468)     |
-|     Survived | TRUE POSITIVE (233)  | FALSE NEGATIVE (109)    | 
+And we can rebuild the manual confusion matrix to make it easier to understand:
 
-Accuracy = TRUE POSITIVES + TRUE NEGATIVES / TOTAL
-78.68 = (233 + 468) / 891 * 100
+| Actual   | Predicted Died       | Predicted Survived  |
+|:--------:|:--------------------:|:-------------------:|
+| Surived  | FALSE POSITIVE (109) | TRUE NEGATIVE (233) |
+|     Died | TRUE POSITIVE (468)  | FALSE NEGATIVE (81) | 
 
+- Accuracy = TRUE POSITIVES + TRUE NEGATIVES / TOTAL
+- .787 = (468 + 233) / 891
 - A model that is nearly 80% accurate is actually pretty good.
 - How to calculate accuracy using R.
 
 ```{r}
-accuracy <-
-  confusion %>% 
+confusion %>% 
   summarize(
-    ## This is just the total of right answers divided by the total number of rows.
-    (pred_survived[survived == 1] + pred_not_survived[survived == 0]) / nrow(train)
+    (predicted_died[died == 1] + predicted_survived[died == 0]) / nrow(titanic)
   )
-accuracy * 100
 ```
 
-- More Accuracy is generally good.
 - Models have to balance Type I and II error.
     - FALSE POSITIVE == Type  I Error
     - FALSE NEGATIVE == Type II Error
-- And the right balancing point is ultimately subjective, or due to factors outside of the model itself.
+    - But frankly I cannot remember what Type I and Type II error even means, so like most people I refer to them as simply FALSE POSITIVE and FALSE NEGATIVE errors.
+- All else being equal, you want to minimize both forms of error.
 
+## Reintroducing Logistic Regression
 
+Say hi to our old friend logistic regression. We can use logistic regression to calculate increasinly complex models. But for right now, we will recreate our second model.
 
-# Get On The CART
-
-- Classification and Regression Trees AKA CART models are a way of building models that is unlike anything you've probably ever seen before.
-- I could ramble on about what it is, but I think it helps to see one.
-
-```{r}
-## Categorical data must be a factor, string, or logical.
-## We need to remove our prior predictions. We don't need that in our CART model.
-train <- 
-  train %>%
-  mutate(
-    survived = as.factor(survived),
-    pclass = as.factor(pclass),
-    child = as.logical(child)
-  ) %>%
-  select(-pred_survived)
-
-cart_model <- rpart(survived~sex, data = train, method = "class")
-summary(cart_model)
-rpart.plot(cart_model)
-```
-
-- .38 tells us that over-all, only 38% of the population survives.
-- The 1 or 0 tells us if the model would bin that group as survived or died.
-- sex = male
-    - The .19 in blue tells us that only 19% of men survive.
-    - The 65% tells us this branch of the tree contains 65% of the passengers.
-- sex = female
-    - The .74 in light green tells us 74% of women survive.
-    - The 35% tells us this branch of the tree contains 35% of the passengers.
-    - But our model would predict they would live.
-- Let's add another branch to our tree!
-- Internally, it is doing something SIMILAR to looking for the biggest odds ratio.
-- But it is instead looking at what is called the gini purity.
-    - What two-way split can we make with our data to maximize the "purity" of our two leaves.
-    - In other words, what split lumps:
-        - The most surviving passengers with other surviving passengers.
-        - The most deceased passengers with other deceased passengers.
-        - We are not going to worry about the math.
-        - I think it will be clear as we move along.
-
-Let's add age to our model and see what happens.
+Do you remember this?
 
 ```{r}
-cart_model <- rpart(survived~sex+age, data = train, method = "class")
-summary(cart_model)
-rpart.plot(cart_model)
-```
-
-- So, even though it has age, it still thinks gender makes the groups purer than age can.
-    - In other words, there is now split using age that better separates survived and deceased than gender.
-    - There is not statistical test here. If there's a single extra case, that wins.
-    - As the groups become smaller, this becomes a problem.
-- The model decided age isn't useful for women.
-- But identifying children under the age of 6.5 makes it possible to increase the accuracy of the model, for 3% of the total population.
-- We also know First and Second class passengers had first dibs on the boats.
-
-```{r}
-cart_model <- rpart(survived~sex+pclass+age, data = train, method = "class")
-summary(cart_model)
-printcp(cart_model)
-rpart.plot(cart_model)
-```
-
-- WOW
-- The model can "see" in the data how first and second class MEN did not get onto the lifeboats.
-- Across the bottom, you want to be in one of the greed groups. Not the blue. Blue is bad.
-
-```{r}
-train <- train %>% add_predictions(cart_model, type = "class") 
-
-train <-
-  train %>%
-  mutate(
-    pred_survived = as.numeric(levels(pred))[pred],
-    pred_not_survived = 1-as.numeric(levels(pred))[pred]
-  )
-train
-
-## And then we assess it.
-confusion <- 
-  train %>%
-  group_by(survived) %>%
-  summarise(pred_survived = sum(pred_survived, na.rm = TRUE),
-            pred_not_survived = n() - sum(pred_survived, na.rm = TRUE)
-            )
-confusion
-```
-
-And we can look at the accuracy:
-
-```{r}
-accuracy <-
-  confusion %>% 
+## This is why I made a new table called ratios.
+ratios %>%
   summarize(
-    ## This is just the total of right answers divided by the total number of rows.
-    (pred_survived[survived == 1] + pred_not_survived[survived == 0]) / nrow(train)
-  )
-accuracy * 100
+    risk_died_female = risk_died[sex == "female"],
+    risk_died_male = risk_died[sex == "male"],
+    risk_died = risk_died[sex == "male"]/risk_died[sex == "female"],
+    odds_died_female = odds_died[sex == "female"],
+    odds_died_male = odds_died[sex == "male"],
+    odds_died = odds_died[sex == "male"]/odds_died[sex == "female"]
+  ) %>%
+  select(risk_died, odds_died)
 ```
 
-- So yes, this is a lot more work, but we are more accurate now than we were.
+This shows us that the odds of a mail died are . . . somewhat larger . . . than the odds of a female dieing. And, just for fun, if we take the log of odds_died:
 
-## SOME GOOD/SOME BAD
+```{r}
+## Just try to remember this number.
+## It will come up in just a minute, I promite.
+log(12.4)
+```
 
-- AWESOME SAUCE
-   - Decision trees are awesome.
-   - They provide a strong visual reference.
-   - They can be surprisingly accurate/complex.
-- UH OH!!!!
-    - They are prone to over-fitting.
-    - This is where we are modeling on quirks in the data AND not indicative of a larger trend.
-    
-DON'T OVER FIT!!!
+We can get the same results using logistic regression. But first let's remember what logistic regression is. I promise, I'm not rick-rolling you.
 
-- It is possible to tell the rpart command what the smallest group size can be.
-    - minsplit:	the minimum number of observations that must exist in a node in order for a split to be attempted.
-    - minbucket: the minimum number of observations in any terminal <leaf> node.
-- You can set a maxdepth, to control how deep your tree grows.
-- And you can do a random forest, but that is a topic for next week.
+- https://www.youtube.com/watch?v=yIYKR4sgzI8
+    - This video is less than 10 minutes.
+    - I do not entirely agree with his definition of machine learning.
+    - We did multiple regression in class, I just didn't use the term.
+    - The logistic curve of our model is very extreme because we are example uses a categorical variable (sex) so the predicted odds will be identical for all women.
+- https://www.statology.org/logistic-regression/
+- And of course, you could look at the reading.
+
+The function for a logistic model in R is `glm` which is an abbreviation of generalized linear model. Our formula is similar to what we did with linear regression. In this case we want to model died as a function of sex or died~sex.
+
+```{r}
+model_sex <- glm(died~sex, family = binomial, data = titanic)
+summary(model_sex)
+```
+
+Look at the coefficients. They should look like:
+
+```
+Coefficients:
+            Estimate Std. Error z value Pr(>|z|)    
+(Intercept)  -1.0566     0.1290  -8.191 2.58e-16 ***
+sexmale       2.5137     0.1672  15.036  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+```
+
+The estimate for `sexmale` is 2.51. Now, look at this:
+
+```{r}
+exp(2.5137)
+log(12.4)
+```
+An estimated "slope" of 2.5137 tells us that the odds of a male dieing is rougly 12.4 times higher than the odds of a woman dieing because this is our odds ratio. And remember, an odds ratio of roughly 1 would tell us that both groups have about the same amount of risk. And the log of 1 is 0. So if the estimate in our logistic regression model is 0 then there is no difference between the two groups. We can furthermore see that the p-value of this feature is less that .05 which should not surprise you.
+
+And we can use this model to classify passengers into died/survived. If you look at the predicted values from our model_sex, there are only two values .811 and .258.
+
+```{r}
+## head gives you the first six values from a list
+head(model_sex$fitted.values)
+```
+
+Now, if you recall:
+
+```{r}
+titanic %>%
+  summarize(
+    n_died = sum(died),
+    n_passengers = n(),
+    ## Note how I reuse n_died and n_passengers here.
+    ## The round function just makes things easier to read.
+    ## See ?round for more info.
+    p_died = n_died/n_passengers
+  )
+```
+
+I hope you see the pattern here. The fitted values are the risks we calculated earlier. To recreate our model where we have all the women live and all the men die, we could do the following:
+
+```{r}
+## This creates a new column called fitted which has the fitted values from the model.
+titanic$fitted <- model_sex$fitted.values
+
+
+titanic <- 
+  titanic %>%
+  mutate(
+    ## This is what we did last time.
+    ##predicted = case_when(sex == "male"~1, TRUE~0)
+
+    ## But here's a different way to do it.
+    ## If the passenger has a better than 50% chance of dieing,
+    ## we will classify them as dead, otherwise, they survive.
+    predicted = case_when(fitted > .5~1, TRUE~0)
+  )
+
+## And then we assess our model.
+## Note: This is the same code I wrote previously.
+## But we are saving the results so we can reuse them.
+titanic %>%
+  group_by(died) %>%
+  summarize(
+    predicted_died = sum(if_else(predicted == 1, 1, 0)),
+    predicted_survived = sum(if_else(predicted == 0, 1, 0))
+  )
+```
+
+And this gives us the EXACT SAME confusion matrix as before, but we did it with the results of our logistic regression.
+
+The advantage of using a logistic regression model is that, as you can see in the summary gives us more diagnostic information and we can easily build more complex models.

@@ -1,0 +1,169 @@
+---
+title: "Ratios"
+output: html_notebook
+---
+
+
+# Setup
+
+```{r message=FALSE, warning=FALSE}
+library(knitr)
+library(tidyverse)
+strokes <- read_csv("data/strokes.csv") %>% filter(gender != "Other")
+```
+
+
+
+# Data - Strokes
+
+Source: [Kaggle Stroke Prediction Dataset](https://www.kaggle.com/fedesoriano/stroke-prediction-dataset)
+
+> According to the World Health Organization (WHO) stroke is the 2nd leading cause of death globally, responsible for approximately 11% of total deaths. This dataset is used to predict whether a patient is likely to get stroke based on the input parameters like gender, age, various diseases, and smoking status. Each row in the data provides relavant information about the patient.
+
+```{r paged.print=TRUE}
+strokes
+```
+
+1. id: unique patient identifier
+2. gender: "Male", "Female" or "Other"
+3. age: age of the patient
+4. hypertension: 0 if the patient doesn't have hypertension, 1 if the patient has hypertension
+5. heart_disease: 0 if the patient doesn't have any heart diseases, 1 if the patient has a heart disease
+6. ever_married: "No" or "Yes"
+7. work_type: "children", "Govt_jov", "Never_worked", "Private" or "Self-employed"
+8. residence_type: "Rural" or "Urban"
+9. avg_glucose_level: average glucose level in blood
+10. bmi: body mass index
+11. smoking_status: "formerly smoked", "never smoked", "smokes" or "Unknown"*
+12. stroke: 1 if the patient had a stroke or 0 if not
+*Note: "Unknown" in smoking_status means that the information is unavailable for this patient
+
+
+
+# Lab
+
+## Task 01
+
+- Question: The data includes some information about the employment of the patients. Which work type is the most prevalent in this data set?
+- Answer:
+
+To prevent confusion, your options below are identical to what you should have found in your data. In Canvas complete this task with one of the following:
+
+    1. children
+    2. Govt_job
+    3. Never_worked
+    4. Private
+    5. Self-employed
+
+Helpful Hints: The entries in the `work_type` column are formatted oddly, but that's OK. There's always _something_ funny about a data set.
+
+```{r}
+## YOUR CODE HERE!!!
+
+```
+
+## Task 02
+
+- Question: Use R to calculate the percent of patients who are children (based on work type/Task 01).
+- Answer: 
+
+Helpful Hints:
+
+- In other words, divide the work_type count by the total.
+- And yes, you CAN do this without R, but the point is to do this using R.
+- And the easiest way is to calculate the percent for all of the work types.
+
+```{r}
+## YOUR CODE HERE!!!
+
+```
+
+
+## Task 03
+
+- Question: Which patients are more likely to have had a stroke, men or women? 
+- Answer:
+
+Helpful Hints:
+
+- We want to calculate the percentage of patients with a stroke.
+    - This is just like what we did with the titanic data, but we calculated the percent of passengers who died.
+    - But it is the EXACT same idea.
+
+```{r}
+## YOUR CODE HERE!
+
+```
+
+
+## Task 04
+
+- Question: Do men with hypertension have a higher risk of stroke than women with hypertension?
+- Answer: 
+
+- This is ALMOST the same question.
+- All we need to do is to filter down to those with hypertension.
+- Filter should come before group by.
+
+```{r}
+## YOUR CODE HERE!!!
+
+```
+
+
+## Task 05
+
+- Question: How many patients are over the age of 65?
+- Answer:
+
+```{r}
+## YOUR CODE HERE!
+
+```
+
+
+## Task 06
+
+- Question: What is the risk ratio for stroke for men compared to women?
+- Answer: 
+
+Helpful Hint:
+
+- It may help to calculate this all as two steps.
+- First calculate the risk of stroke for men and women.
+    - Save this in a table called risk.
+- Then calculate the risk ratio.
+- And remember, if you can't figure out the fancy code for the risk ratio but you can figure out the gender-specific risk, you can just use R like a calculator and calculate the risk ratio manually.
+
+```{r}
+## YOUR CODE HERE!!!
+
+```
+
+## Task 07
+
+- Question: What is the odds ratio for for stroke for men compared to women?
+- Answer: 
+
+
+```{r}
+## YOUR CODE HERE!
+
+```
+
+PLEASE PLEASE PLEASE notice that the odds ratio and risk ratio are nearly identical with this data. This is because strokes are rare while drowning on the Titanic was not.
+
+## Task 08
+
+- Question: Demonstrate that the same odds ratio can be obtained via logistic regression. Build a model for risk stroke as a function of gender. What is the coefficient for genderMale?
+- Answer:
+
+```{r}
+## YOUR CODE HERE!!!
+
+```
+
+For more on this topic: [There's Nothing Odd About Th e Odds Ratio](https://www.statisticssolutions.com/theres-nothing-odd-about-the-odds-ratio-interpreting-binary-logistic-regression/)
+
+Logistic regression allows us to to model more complex models and relationships than we would ever want to model by hand.
+
