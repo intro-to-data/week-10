@@ -4,3 +4,6 @@
 .Rhistory
 .RData
 .Ruserdata
+lecture_files/*
+lab-answers_files/*
+lab_files/*

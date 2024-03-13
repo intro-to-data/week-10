@@ -1,0 +1,344 @@
+---
+title: "Ratios"
+output: html_notebook
+---
+
+
+# Goals
+
+- Practice plotting with ggplot.
+- Practice building more simple and multiple linear regressions.
+- This week, YOU have to create your own code chunks.
+    - I recommend separating your plot code chunks from your modeling code chunks to help you see everything.
+
+
+# Setup
+
+```{r}
+#| label: setup
+#| message: false
+#| warning:false
+
+library(Stat2Data)
+library(janitor)
+library(lubridate)
+library(tidymodels)
+library(tidyverse)
+
+options(scipen = 999)
+
+data(Hawks)
+
+# This is what we would call a data pipe-line.
+# During import, data transformations make the data easier to work with.
+hawks <-
+  Hawks |>
+  # Lower case column names. And Spaces rather than SnakeCase.
+  clean_names() |>
+  # Adds some actual dates data and makes species easier to read.
+  mutate(
+    capture_date = ymd(paste(year, month, day)),
+    capture_day_of_week = wday(capture_date, label = TRUE),
+    # Makes EVERYTHING easier to understand.
+    species_desc = case_when(
+      species == "SS" ~ "Sharp-Shinned",
+      species == "RT" ~ "Red-Tailed",
+      species == "CH" ~ "Cooper's"
+    )
+  ) |>
+  # Rearranges our columns.
+  select(
+    band_number,
+    capture_date,
+    capture_time,
+    capture_year = year,
+    capture_month = month,
+    capture_day = day,
+    capture_day_of_week,
+    species,
+    species_desc,
+    age:crop
+  )
+rm(Hawks)
+```
+
+
+
+# Data - Hawks (again)
+
+## Data
+
+### Description:
+
+Data for a samples of hawks from three different species
+
+### Format:
+
+A data frame with 908 observations on the following 19 variables.
+
+- band_number:	ID band code
+- capture_date:	Date the bird was captured
+- capture_time:	Time of capture (HH:MM)
+- capture_year: 1992-2003 - The year the bird was captured
+- capture_month: 9=September to 12=December - The month the bird was captured
+- capture_day: The day the bird was captured
+- capture_day_of_week: The name of the day of the week the bird was captured
+- species: CH=Cooper's, RT=Red-Tailed, SS=Sharp-Shinned
+- age: A=Adult or I=Immature
+- sex: F=Female or M=Male
+- wing: Length (in mm) of primary wing feather from tip to wrist it attaches to
+- weight: Body weight (in gm)
+- culmen: Length (in mm) of the upper bill from the tip to where it bumps - into the fleshy part of the bird
+- hallux: Length (in mm) of the killing talon
+- tail: Measurement (in mm) related to the length of the tail (invented at the MacBride Raptor Center)
+- standard_tail: Standard measurement of tail length (in mm)
+- tarsus: Length of the basic foot bone (in mm)
+- wing_pit_fat: Amount of fat in the wing pit
+- keel_fat: Amount of fat on the breastbone (measured by feel
+- crop: Amount of material in the crop, coded from 1=full to 0=empty
+
+### Details:
+
+Students and faculty at Cornell College in Mount Vernon, Iowa, collected data over many years at the hawk blind at Lake MacBride near Iowa City, Iowa. The data set that we are analyzing here is a subset of the original data set, using only those species for which there were more than 10 observations. Data were collected on random samples of three different species of hawks: Red-tailed, Sharp-shinned, and Cooper's hawks.
+
+### Source
+
+Many thanks to the late Professor Bob Black at Cornell College for sharing these data with the world.
+
+
+# Lab Tasks
+
+- Remember, a model without a plot is a dangerous thing.
+
+## Task 01:
+
+Before attempting this task, please review the data dictionary/information above.
+
+- **Question:** Based on what we have learned thus far about linear regression, do you think we can predict the body weight of a hawk based on its wing length? 
+  - After telling me what we should do first, I want you to do this thing and upload the results to Canvas and tell me if you think this model is worth pursuing.
+  - HINT: This involves ggplot.
+- **Answer:** The answer is to draw a scatter plot of weight as a function of wing lenght. This means weight should be on the Y Axis and Wing Length is on the X Axis. And they should observe in their answer that the relationship between the X and Y variable does appear to be linear.
+
+Helpful Hints: 
+
+- The first step in this process is to LOOK at the relationship between wing length, our independent variable, and body mass, our dependent variable.
+
+```{r}
+ggplot(hawks, aes(x = wing, y = weight)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+## Task 02:
+
+- **Question:** Which is a better predictor of hawk body weight?
+  - Wing length (wing) or
+  - Tail length (tail)
+- **Answer:** 
+
+This is an "essay" question on Canvas. Please use ggplot and our new linear regression skills to build two competing models (lm_wing, lm_tail). Apply the model metrics we have learned, such as R-squared and Sigma, to explain which model is a better predictor of hawk body weight.
+
+Helpful Hints:
+
+- I recommend graphing this AND building two models:
+  - lm_wing
+  - lm_tail
+- Separate the code into TWO code chunks. 
+  - This makes it easier to compare/contrast your competing models.
+
+```{r}
+ggplot(hawks, aes(x = wing, y = weight)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+lm_wing <- linear_reg() |> fit(weight ~ wing, data = hawks)
+tidy(lm_wing)
+glance(lm_wing)
+```
+
+```{r}
+ggplot(hawks, aes(x = tail, y = weight)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+lm_tail <- linear_reg() |> fit(weight ~ tail, data = hawks)
+tidy(lm_tail)
+glance(lm_tail)
+```
+
+## Task 03:
+
+If you look carefully at our plots from the previous two tasks, you may have noticed two to three groups in the plot. 
+
+- **Question:** Look at the variables available in `hawks` and tell me which variable (feature) best "explains" these three groups.
+- **Answer:** `species`
+
+- **Question:** If you made one regression model for each group, do you think they would have the same intercept? The answer is yes or no, and tell me why.
+- **Answer:** DIFFERENT
+  
+- **Question:** If you made one regression model for each group, do you think they would have the same slope? The answer is yes or no, and tell me why.
+- **Answer:** They aren't identical, but they are similar.
+
+Helpful Hints:
+
+- Take your favorite plot from Task 01 or Task 02, and change the aesthetic such that `color = foo` where `foo` is the name of the variable. If your plot does not already include `geom_smooth(method = "lm")`, add this. 
+- You may have to trymore than one variable! 
+- Look for a factor (categorical) variable with three distinct values.
+- The right answer is _not_ a numeric variable.
+
+```{r}
+ggplot(hawks, aes(x = wing, y = weight, color = species)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+```
+
+## Task 04:
+
+- **Question:** Plot the distribution of the residuals from the lm_wing model using geom_density and geom_qq. Do these residual values appear to be normally distributed?
+- **Answer:** The residuals seem pretty normal based on the density plot, but the QQ plot makes it  cleare the highest and lowest values are leveraging the model.
+
+Helpful Hints:
+
+- Use the `augment()` frunction to add the residuals to a new data set called hawks_lm_wing.
+
+```{r}
+hawks_lm_wing <-
+  lm_wing |>
+  augment(new_data = hawks)
+
+ggplot(hawks_lm_wing, aes(.resid)) +
+  geom_density()
+
+ggplot(hawks_lm_wing, aes(sample = .resid)) +
+  geom_qq() +
+  geom_qq_line()
+```
+
+## Task 05:
+
+- **Question:** Plot residuals as a function of predicted values. Does the distribution of our errors (residuals) look homogeneous?
+- **Answer:** I am looking for .resid on the Y Axis and .pred on the X Axis, but if they get it backwards, don't take off more than a point or two. The answer is NO, it is not homogenous and we still see the same three groups we saw earlier.
+
+Helpful Hints:
+
+- Homogenous means they should be spread out pretty evenly, without any obvious patterns or shapes.
+- If it looks like random noise, consider it a success.
+
+```{r}
+ggplot(
+  data = hawks_lm_wing,
+  aes(x = .pred, y = .resid, color = species)
+) +
+  geom_point()
+```
+
+## Task 06:
+
+Create a NEW linear model called `lm_wing_species`. To make this model, take the code you wrote to create the model `lm_wing` and copy/paste it below. To create our new model, assign the output of our code to `lm_wing_species` and change the model specification (formula) to this:
+
+```
+weight ~ wing + species
+```
+
+When you read the output of this model (tidy), you will see that it includes
+
+This should be read as "weight as a function of wing plus species".
+
+```{r}
+lm_wing_species <- linear_reg() |> fit(weight ~ wing + species, data = hawks)
+tidy(lm_wing_species)
+glance(lm_wing_species)
+```
+
+If you did this correctly, you should see something that looks like:
+
+```
+#| eval: false
+# This isn't here for you to run.
+# It is for you to look at.
+# This is what your model _should_ look like.
+
+r$> tidy(lm_wing_species)
+# A tibble: 4 × 5
+  term        estimate std.error statistic  p.value
+  <chr>          <dbl>     <dbl>     <dbl>    <dbl>
+1 (Intercept)  -140.      45.7       -3.06 2.28e- 3
+2 wing            2.29     0.172     13.3  5.16e-37
+3 speciesRT     355.      30.6       11.6  4.87e-29
+4 speciesSS    -136.      22.7       -5.98 3.25e- 9
+```
+
+Let's interpret this. When we add a categorical value with a plus sign to a model, we create a multiple linear model WITHOUT interactions, which means we have one intercept for each distinct value in the categorical variable. In this case, that means species, so we have one intercept value and one line for each of the three species, Red-Tailed (RT), Sharp-Shinned (SS), and Cooper's (CH). The slope of each of our three lines is IDENTICAL.
+
+- 1 (Intercept): This is the intercept value for Cooper's Hawks.
+- 2 wing: This is the slope of all three lines.
+- 3 speciesRT: This is the intercept value for Red Tails.
+- 4 speciesSS: This is the intercept value for Sharp Shins.
+
+Unfortunately, there's no  way to make GGPLOT do this on its own. But we can do it manually. Most of this code should be very, very familiar to you by now.
+
+```{r}
+ggplot(hawks, aes(x = wing, y = weight, color = species)) +
+  geom_point() +
+  geom_abline(intercept = -139.946, slope = 2.292, color = "#F8766D") + # Cooper's (CH)
+  geom_abline(intercept = -139.946 + 355.222, slope = 2.292, color = "#00BA38") + # Red Tailed (RT)
+  geom_abline(intercept = -139.946 + -135.721, slope = 2.292, color = "#619CFF") # Sharp Shinned (SS)
+```
+
+
+- **Question:** Is the Standard Error (Sigma) of `lm_wing_species` better or worse than `lm_wing`?
+- **Answer:** It is smaller.
+
+```{r}
+glance(lm_wing_species)
+```
+
+- **Question:** Looking at the graph above, do you think this is a better model? 
+- **Answer:** Yes, but it is still weird.
+
+Helpful Hints:
+
+- Feel free to use some of the other metrics we have learned.
+- Use my graph above. You don't need to write any code for this question.
+
+## Task 08:
+
+Let's make ONE MORE MODEL, `lm_wing_species_interactions`. This should be exactly like our last model, `lm_wing_species`, but change the formula to read:
+
+```
+weight ~ wing + species
+```
+
+Now we have a model WITH INTERACTIONS!
+
+```{r}
+lm_wing_species_interactions <- linear_reg() |> fit(weight ~ wing * species, data = hawks)
+tidy(lm_wing_species_interactions)
+glance(lm_wing_species_interactions)
+```
+
+- Now, the output of our model has THREE lines, each with a different slope. 
+- This is EXACTLY what ggplot does by default when you add `color = species` to the aesthetic function.
+- Look at the follow graph and see how I overlay the default geom_smooth() with lines manually drawn, based on the values from our lm_wing_species_interactions model.
+
+Compare these:
+
+```{r}
+ggplot(hawks, aes(x = wing, y = weight, color = species)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  geom_abline(intercept = -259.0838, slope = 2.7799, color = "#F8766D", linetype = "dotted") + # Cooper's (CH)
+  geom_abline(intercept = -259.0838 + 569.5413, slope = 2.7799 + -0.7361, color = "#00BA38", linetype = "dotted") + # Red Tailed (RT)
+  geom_abline(intercept = -259.0838 + -164.0303, slope = 2.7799 + 0.3097, color = "#619CFF", linetype = "dotted" ) # Sharp Shinned (SS)
+```
+
+## Task 09:
+
+**Question:** Without adding any new variables to the model, `lm_wing_species_interactions`, what would you do to improve it?
+**Answer:** 
+
+Helpful Hint:
+
+- You don't necessarily have to write any code, although you are welcome to write as much as you would like.
+- Look at our metrics, graphs, etc. If you don't think you can write the code, that's fine. Just tell me what you think we should do in regular old English.

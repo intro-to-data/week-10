@@ -1,0 +1,331 @@
+---
+title: "Returning To Linear Regression"
+---
+
+```{r}
+#| label: setup
+#| message: false
+#| warnings: false
+
+library(Stat2Data)
+library(janitor)
+library(rio)
+library(tidymodels)
+library(tidyverse)
+
+options(scipen = 999)
+
+data(HighPeaks)
+high_peaks <- HighPeaks |> clean_names()
+rm(HighPeaks)
+```
+
+
+
+# Let's go for another hike!
+
+- Question: Which hike will take longer?
+  1. A hike of two miles?
+  2. A hike of four miles?
+- Answer: All else being equal, a hike of four miles should take twice as long as a hike of two miles.
+
+Our midterm introduced us to a data set showing estimated hike times for the 46 summits in the High Peaks region of the Adirondacks. (One of my favorite places.)
+
+```{r}
+#| echo: false
+high_peaks
+```
+
+We will use this data to further explore linear regression.
+
+## Data Dictionary:
+
+- peak: Name of the mountain
+- elevation: Elevation at the highest point (in feet)
+- difficulty: Rating of difficulty of the hike: 1 (easy) to 7 (most difficult)
+- ascent: Vertical ascent (in feet)
+- length: Length of hike (in miles)
+- time: Expected trip time (in hours)
+
+
+
+# Time ~ Length
+
+- Question: If we know the length of the hike, can we estimate how long it will take to complete?
+- Answer: Yes, up to a point.
+
+```{r}
+ggplot(high_peaks, aes(y = time, x = length)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+**VERY IMPORTANT DISCLAIMER:** Any insight we gain here is specific to the Adirondack High Peaks region. This model is useless for estimating time to complete a hike in the Alps, Kansas, or the swamps of Florida.
+
+Units:
+
+- Length: Miles (We can determine this using a map.)
+- Time: Hours (This is what we want to estimate.)
+
+```{r}
+lm_length <-
+  linear_reg() |>
+  fit(time ~ length, data = high_peaks)
+tidy(lm_length)
+```
+
+So, what does this model tell us?
+
+- No hike lasts less than 2 hours in the Adirondacks!
+  - This is rather true actually.
+- For every 1 mile added to the hike, we add .684s hour to the time it takes to finish the hike.
+- Both the intercept and the independent variable, time, are statistically significant.
+
+Now, let's look at our model more carefully.
+
+```{r}
+glance(lm_length)
+```
+
+Let's focus on:
+
+- r.squared: The proportion of the variance in the dependent variable (time) explained by the independent variable (length).
+  - AKA: R Squared
+  - Must be between 0 and 1.
+  - Yes, higher is better.
+- sigma: Standard Error AKA Standard Deviation of the Residuals.
+  - AKA: Sigma, Standard Error
+  - On average, how far are the actual values from our fitted values?
+  - Smaller is better and the unit is the same as our dependent variable.
+  - Yes, everything in this class needs six names.
+  - We can use this to give us a rough 95% Prediction Interval
+- nobs:
+  - AKA: Number of Observations
+
+```{r}
+ggplot(high_peaks, aes(y = time, x = length)) +
+  geom_point() +
+  geom_smooth(method = "lm",) +
+  geom_abline(color = "darkred", slope = 0.684, intercept = (2.05 + 2*1.44)) +
+  geom_abline(color = "darkred", slope = 0.684, intercept = (2.05 - 2*1.44))
+```
+
+
+
+# Time ~ Ascent
+
+- Question: If we know the ascent distance of the hike, can we estimate how long it will take to complete?
+- Answer: Yes, up to a point.
+
+```{r}
+ggplot(high_peaks, aes(y = time, x = ascent)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+
+Units:
+
+- Ascent: How much climbing (up) you do measured in feet.
+- Time: Hours (This is what we want to estimate.)
+
+```{r}
+lm_ascent <-
+  linear_reg() |>
+  fit(time ~ ascent, data = high_peaks)
+tidy(lm_ascent)
+```
+
+So, what does this model tell us?
+
+- For every foot of ascent we add 0.00208 hours to the time it takes to finish the hike.
+- Both the intercept and the independent variable, time, are statistically significant.
+- Because this model has an X Axis with a different unit, we cannot directly compare the slope.
+- But we can compare the standard error and we should be able to see it is larger for this second model.
+
+Now, let's look at our model more carefully.
+
+```{r}
+glance(lm_ascent) 
+```
+
+Let's focus on:
+
+- r.squared: This is lower than our previous model.
+- sigma: This is larger than our previous model.
+- nobs: This is, of course, the same.
+  - Also, this has nothing to do with the accuracy of different features of the model.
+
+```{r}
+ggplot(high_peaks, aes(y = time, x = ascent)) +
+  geom_point() +
+  geom_smooth(method = "lm",) +
+  geom_abline(color = "darkred", slope = 0.00208, intercept = (4.21 + 2*2.50)) +
+  geom_abline(color = "darkred", slope = 0.00208, intercept = (4.21 - 2*2.50))
+```
+
+
+
+
+# Model Assessment
+
+- Residuals should be normally distributed.
+- Homogeneity of variance.
+- Error terms should be independent.
+
+```{r}
+high_peaks_length <-
+  lm_length |>
+  augment(high_peaks)
+
+high_peaks_ascent <-
+  lm_ascent |>
+  augment(high_peaks)
+```
+
+- I think augment is easier to use than predict AND it gives us our residuals.
+- Although the column names are, regrettable.
+  - They are chosen to avoid potential conflict with existing columns which may be in the data.
+
+## Residuals should be normally distributed.
+
+- Residuals are the difference between the predicted and actual value of y for a given value of x.
+- And these residuals should be normally distributed.
+
+```{r}
+high_peaks_length |>
+  ggplot(aes(.resid)) +
+  geom_density() +
+  labs(title = "Distribution of Residuals (lm_length)")
+
+high_peaks_ascent |>
+  ggplot(aes(.resid)) +
+  geom_density() +
+  labs(title = "Distribution of Residuals (lm_ascent)")
+```
+
+And while that works, a more sensitive visualization is the Q-Q plot.
+
+- Q-Q stands for Quantile-Quantile plot.
+- This is a graphical test to see if our data, residuals, come from a normal distribution.
+
+```{r}
+high_peaks_length |>
+  ggplot(aes(sample = .resid)) +
+  geom_qq() +
+  geom_qq_line() +
+  labs(title = "Distribution of Residuals (lm_length)")
+
+high_peaks_ascent |>
+  ggplot(aes(sample = .resid)) +
+  geom_qq() +
+  geom_qq_line() +
+  labs(title = "Distribution of Residuals (lm_ascent)")
+```
+
+- And the answer here is yes, because our residuals mostly fall along the 45 degree slope.
+
+## Homogeneity of variance
+
+We also want to see to test for homogeneity of variance (fancy term, simple idea).
+
+```{r}
+high_peaks_length |>
+  ggplot(aes(x = .pred, y = .resid)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  labs(title = "Distribution of Residuals (lm_length)")
+
+high_peaks_ascent |>
+  ggplot(aes(x = .pred, y = .resid)) +
+  geom_point() +
+  #geom_smooth(method = lm) +
+  labs(title = "Distribution of Residuals (lm_ascent)")
+
+```
+
+- You basically want to see random noise.
+- And we do, mostly.
+
+
+
+# Multiple Linear Regression
+
+## Time ~ Length + Ascent
+
+- Multiple linear regression is a regression model that estimates the relationship between a quantitative dependent variable (time) and two or more independent variables using a straight line.
+- The independent variables should not be strongly correlated (Multicollinearity)
+  - This particular example is . . . kinda . . . meh.
+
+```{r}
+ggplot(high_peaks, aes(y = length, x = ascent)) +
+  geom_point() #+
+  #geom_smooth(method = "lm")
+```
+
+```{r}
+cor.test(high_peaks$length, high_peaks$ascent)
+```
+
+
+So, since they aren't super-correlated, let's try it out. It makes sense intuitively.
+
+```{r}
+lm_length_ascent <-
+  linear_reg() |>
+  fit(time ~ length + ascent, data = high_peaks)
+tidy(lm_length_ascent)
+```
+
+- Our estimates all changed.
+- This is the smallest intercept.
+  - Don't read much into that.
+- length: For every 1 mile in length, add .658 hours.
+- ascent: For every 1 foot in ascent, add 0.000305 hours.
+
+```{r}
+glance(lm_length_ascent)
+```
+
+- Notice that R Squared and Adjusted R Squared are starting to diverge.
+  - This is because Adjusted R Squared is penalized for adding more features.
+- And our sigma actually went up, slightly, which is not what we want.
+
+## Time ~ Length + Difficulty
+
+```{r}
+ggplot(high_peaks, aes(y = length, x = difficulty)) +
+  geom_point() #+
+  #geom_smooth(method = "lm")
+```
+
+```{r}
+cor.test(high_peaks$length, high_peaks$difficulty)
+```
+
+This is honestly, borderline.
+
+```{r}
+lm_length_difficulty <-
+  linear_reg() |>
+  fit(time ~ length + difficulty, data = high_peaks)
+tidy(lm_length_difficulty)
+```
+
+- Our estimates all changed.
+- This is the smallest intercept.
+  - Don't read much into that.
+- length: For every 1 mile in length, add .658 hours.
+- ascent: For every 1 foot in ascent, add 0.000305 hours.
+
+```{r}
+glance(lm_length_difficulty)
+```
+
+- Adjusted R Squared is the more "conservative" estimate for how much variance is explained.
+- This time, our sigma went down, slightly.
+
+
+# Can you build a model with a lower sigma than 1.29?
+
+In Canvas, tell me what features you used and what the sigma was for your best model.
