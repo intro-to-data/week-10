@@ -5,13 +5,15 @@ output: html_notebook
 
 
 
-# Goals
+Goals
+================================================================================
 
 - Continue exploring linear regression.
 - Answer questions.
 
 
-## Task 0:
+Task 0:
+--------------------------------------------------------------------------------
 
 Next week we will turn our attention to odds, odds ratios, and logistic
 regression. Therefore, I want to take few minutes and answer any questions you
@@ -21,7 +23,8 @@ This will be a group discussion.
 
 
 
-# Setup
+Setup
+================================================================================
 
 I am creating models with very similar names, like `lm_simple`. PLEAES clear
 your global environment before working on this lab so you don't accidentally use
@@ -49,9 +52,11 @@ diamonds <- read_csv("data/diamonds.csv")
 
 
 
-# Data - Diamonds
+Data - Diamonds
+================================================================================
 
-## Data
+Data
+--------------------------------------------------------------------------------
 
 ### Description:
 
@@ -73,12 +78,14 @@ A data frame with 53940 rows and 10 variables:
 
 
 
-# Lab Tasks
+Lab Tasks
+================================================================================
 
 - Remember, a model without a plot is a dangerous thing.
 
 
-## Task 01:
+Task 01:
+--------------------------------------------------------------------------------
 
 Before attempting this task, please review the data dictionary/information
 above.
@@ -93,7 +100,8 @@ above.
 YOUR CODE HERE!
 
 
-## Task 02:
+Task 02:
+--------------------------------------------------------------------------------
 
 OK, I'll go ahead and admit it, the answer to Task 01 is NO. If you answered
 yes, I want you to go back and look at your plot very carefully before
@@ -132,7 +140,8 @@ diamonds |>
 YOUR CODE HERE!
 
 
-## Task 03:
+Task 03:
+--------------------------------------------------------------------------------
 
 But, before we we actually develop a linear regression, we have to do SOMETHING
 about that price vs carat curve.
@@ -199,7 +208,8 @@ diamonds |> summarize(min(carat), min(carat_log), max(carat), max(carat_log))
 YOUR CODE HERE!
 
 
-## Task 04:
+Task 04:
+--------------------------------------------------------------------------------
 
 - **Question:** Create a model, `lm_simple` which models `price_log` as a
   function of `carat_log`.
@@ -228,7 +238,8 @@ Remember, our coefficients are no longer coefficients of actual carats or
 prices.
 
 
-## Task 05:
+Task 05:
+--------------------------------------------------------------------------------
 
 The opposit of the `log()` function is the exponent function, `exp()`. Can you
 use augment and your dplyr skills to transform your predicted price_log into a
@@ -246,6 +257,7 @@ predicted price output and plot the density plot of your predicted prices?
 YOUR CODE HERE!
 
 
-## Task 06:
+Task 06:
+--------------------------------------------------------------------------------
 
 Please signal to me when your group gets to Task 06.
