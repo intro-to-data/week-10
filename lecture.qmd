@@ -1,5 +1,5 @@
 ---
-title: "Returning To Linear Regression"
+title: "Last Linear Regression Discussion"
 ---
 
 ```{r}
@@ -7,325 +7,558 @@ title: "Returning To Linear Regression"
 #| message: false
 #| warnings: false
 
-library(Stat2Data)
-library(janitor)
-library(rio)
 library(tidymodels)
 library(tidyverse)
 
 options(scipen = 999)
 
-data(HighPeaks)
-high_peaks <- HighPeaks |> clean_names()
-rm(HighPeaks)
+penguins <- read_csv("data/penguins.csv")
+
 ```
 
 
 
-# Let's go for another hike!
+Linear Regression - Not always simple
+================================================================================
 
-- Question: Which hike will take longer?
-  1. A hike of two miles?
-  2. A hike of four miles?
-- Answer: All else being equal, a hike of four miles should take twice as long as a hike of two miles.
+- For this discussion, we will return to the penguins data set.
+- Let's predict flipper length as a function of body mass.
 
-Our midterm introduced us to a data set showing estimated hike times for the 46 summits in the High Peaks region of the Adirondacks. (One of my favorite places.)
 
 ```{r}
-#| echo: false
-high_peaks
-```
 
-We will use this data to further explore linear regression.
-
-## Data Dictionary:
-
-- peak: Name of the mountain
-- elevation: Elevation at the highest point (in feet)
-- difficulty: Rating of difficulty of the hike: 1 (easy) to 7 (most difficult)
-- ascent: Vertical ascent (in feet)
-- length: Length of hike (in miles)
-- time: Expected trip time (in hours)
-
-
-
-# Time ~ Length
-
-- Question: If we know the length of the hike, can we estimate how long it will take to complete?
-- Answer: Yes, up to a point.
-
-```{r}
-ggplot(high_peaks, aes(y = time, x = length)) +
+# Observe that I am removing any row where body_mass_g or flipper_length_mm
+# is NA.
+penguins |>
+  filter(
+    !is.na(flipper_length_mm),
+    !is.na(body_mass_g)
+  ) |>
+  ggplot(aes(x = body_mass_g, y = flipper_length_mm)) +
   geom_point() +
-  geom_smooth(method = "lm")
+  geom_smooth(method = lm)
+
 ```
 
-**VERY IMPORTANT DISCLAIMER:** Any insight we gain here is specific to the Adirondack High Peaks region. This model is useless for estimating time to complete a hike in the Alps, Kansas, or the swamps of Florida.
-
-Units:
-
-- Length: Miles (We can determine this using a map.)
-- Time: Hours (This is what we want to estimate.)
+- This looks like a simple linear regression.
+- But, how many rows did I remove?
 
 ```{r}
-lm_length <-
+
+penguins |>
+  summarize(
+    n_rows = n(),
+    missing_rows = sum(case_when(
+      is.na(flipper_length_mm)~1,
+      is.na(body_mass_g)~1,
+      TRUE~0)),
+    p_missing = 100*missing_rows/n_rows
+    )
+
+```
+
+- Since all I'm doing is building a linear regression, there isn't necessarily a
+  simple way to calculate how many rows is too many to drop.
+      - That said, my rule of thumb is that if I am dropping more than a few
+        percent, I need to think about what I'm doing.
+- Next, let's build the linear regression model.
+- I am also going to plot the residuals.
+
+
+```{r}
+
+# Build the model!
+lm_simple <-
   linear_reg() |>
-  fit(time ~ length, data = high_peaks)
-tidy(lm_length)
-```
+  fit(
+    flipper_length_mm~body_mass_g,
+    data = penguins |> filter(
+    !is.na(flipper_length_mm),
+    !is.na(body_mass_g))
+  )
 
-So, what does this model tell us?
+# Store residuals in our data set.
+penguins <-
+  lm_simple |>
+  augment(penguins) |>
+  select(
+    species,
+    island,
+    bill_length_mm,
+    bill_depth_mm,
+    flipper_length_mm,
+    sex,
+    year,
+    body_mass_g,
+    pred_simple = .pred,
+    resid_simple = .resid
+  )
 
-- No hike lasts less than 2 hours in the Adirondacks!
-  - This is rather true actually.
-- For every 1 mile added to the hike, we add .684s hour to the time it takes to finish the hike.
-- Both the intercept and the independent variable, time, are statistically significant.
+# Model results
+output <-
+  penguins |>
+  filter(!is.na(resid_simple)) |>
+  summarize(
+    avg_resid = mean(resid_simple),
+    sd_resid = sd(resid_simple),
+    lower_95 = avg_resid - 2*sd_resid,
+    upper_95 = avg_resid + 2*sd_resid
+  )
 
-Now, let's look at our model more carefully.
-
-```{r}
-glance(lm_length)
-```
-
-Let's focus on:
-
-- r.squared: The proportion of the variance in the dependent variable (time) explained by the independent variable (length).
-  - AKA: R Squared
-  - Must be between 0 and 1.
-  - Yes, higher is better.
-- sigma: Standard Error AKA Standard Deviation of the Residuals.
-  - AKA: Sigma, Standard Error
-  - On average, how far are the actual values from our fitted values?
-  - Smaller is better and the unit is the same as our dependent variable.
-  - Yes, everything in this class needs six names.
-  - We can use this to give us a rough 95% Prediction Interval
-- nobs:
-  - AKA: Number of Observations
-
-```{r}
-ggplot(high_peaks, aes(y = time, x = length)) +
-  geom_point() +
-  geom_smooth(method = "lm",) +
-  geom_abline(color = "darkred", slope = 0.684, intercept = (2.05 + 2*1.44)) +
-  geom_abline(color = "darkred", slope = 0.684, intercept = (2.05 - 2*1.44))
-```
-
-
-
-# Time ~ Ascent
-
-- Question: If we know the ascent distance of the hike, can we estimate how long it will take to complete?
-- Answer: Yes, up to a point.
-
-```{r}
-ggplot(high_peaks, aes(y = time, x = ascent)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-```
-
-
-Units:
-
-- Ascent: How much climbing (up) you do measured in feet.
-- Time: Hours (This is what we want to estimate.)
-
-```{r}
-lm_ascent <-
-  linear_reg() |>
-  fit(time ~ ascent, data = high_peaks)
-tidy(lm_ascent)
-```
-
-So, what does this model tell us?
-
-- For every foot of ascent we add 0.00208 hours to the time it takes to finish the hike.
-- Both the intercept and the independent variable, time, are statistically significant.
-- Because this model has an X Axis with a different unit, we cannot directly compare the slope.
-- But we can compare the standard error and we should be able to see it is larger for this second model.
-
-Now, let's look at our model more carefully.
-
-```{r}
-glance(lm_ascent) 
-```
-
-Let's focus on:
-
-- r.squared: This is lower than our previous model.
-- sigma: This is larger than our previous model.
-- nobs: This is, of course, the same.
-  - Also, this has nothing to do with the accuracy of different features of the model.
-
-```{r}
-ggplot(high_peaks, aes(y = time, x = ascent)) +
-  geom_point() +
-  geom_smooth(method = "lm",) +
-  geom_abline(color = "darkred", slope = 0.00208, intercept = (4.21 + 2*2.50)) +
-  geom_abline(color = "darkred", slope = 0.00208, intercept = (4.21 - 2*2.50))
-```
-
-
-
-
-# Model Assessment
-
-- Residuals should be normally distributed.
-- Homogeneity of variance.
-- Error terms should be independent.
-
-```{r}
-high_peaks_length <-
-  lm_length |>
-  augment(high_peaks)
-
-high_peaks_ascent <-
-  lm_ascent |>
-  augment(high_peaks)
-```
-
-- I think augment is easier to use than predict AND it gives us our residuals.
-- Although the column names are, regrettable.
-  - They are chosen to avoid potential conflict with existing columns which may be in the data.
-
-## Residuals should be normally distributed.
-
-- Residuals are the difference between the predicted and actual value of y for a given value of x.
-- And these residuals should be normally distributed.
-
-```{r}
-high_peaks_length |>
-  ggplot(aes(.resid)) +
+# Plots my lower and upper 95%
+penguins |>
+  filter(!is.na(resid_simple)) |>
+  # Remember to use + to pipe in ggplot!
+  ggplot(aes(x = resid_simple)) +
   geom_density() +
-  labs(title = "Distribution of Residuals (lm_length)")
+  geom_vline(aes(xintercept = output$lower_95), color = "red") +
+  geom_vline(aes(xintercept = output$upper_95), color = "red")
 
-high_peaks_ascent |>
-  ggplot(aes(.resid)) +
+```
+
+- This is working fairly well although our residuals are a little skewed.
+- But I wonder how we could tighten this model up.
+- I wonder how species affects the relationship between body weight and flipper.
+
+
+```{r}
+
+penguins |>
+  filter(
+    !is.na(flipper_length_mm),
+    !is.na(body_mass_g),
+    !is.na(species)
+  ) |>
+  ggplot(aes(x = body_mass_g, y = flipper_length_mm, color = species)) +
+  geom_point()
+
+```
+
+- Although we could not see it earlier, we do have three distinct species and
+  the Gentoos (blue) are quite separate from the Adelies and Chinstraps.
+- So let's add species to our model.
+- Up to this point, I've pointed out that ggplot would simply show us the model
+this way:
+
+
+```{r}
+
+penguins |>
+  filter(
+    !is.na(flipper_length_mm),
+    !is.na(body_mass_g),
+    !is.na(species)
+  ) |>
+  ggplot(aes(x = body_mass_g, y = flipper_length_mm, color = species)) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+```
+
+There are TWO things I want you to observe in this plot.
+
+1. Each species has a slightly different slope. 
+    - The slope for Adelie and Gentoo appears similar.
+    - The slope for Chinstrap is clearly steeper.
+2. Each species wilkl have a different intercept value with Gentoo having the
+   highest intercept value.
+   
+However, R is a flexible tool and we can model this additional feature,
+`species`, in several different ways. We will use the formula operators to create the following models:
+
+- `+` to create `lm_intercept`
+- `:` to create `lm_slope`
+- `lm_combined` will combine the best apects of both!
+
+There are a few other ways to model this, but this is enough for today's
+discussion. But first I want to draw a scatter plot and super-impose our model
+over our data. In doing so, we will disable ggplot's default plot.
+
+- In the graphs that follow, I will overlay the new model on top of the
+  regression line from `lm_simple`.
+
+```{r}
+
+tidy(lm_simple)
+
+penguins |>
+  filter(
+    !is.na(flipper_length_mm),
+    !is.na(body_mass_g),
+    !is.na(species)
+  ) |>
+  ggplot(aes(x = body_mass_g, y = flipper_length_mm, color = species)) +
+  geom_point() +
+  geom_abline(
+    aes(
+      intercept = lm_simple$fit$coefficients[1],
+      slope = lm_simple$fit$coefficients[2],
+      ),
+    color ="darkblue")
+
+```
+
+Let's build a model using `+` in our formula, which we will call
+`lm_intercept`. In this model, each species will have:
+
+- a different intercept
+- the same slope
+
+
+```{r}
+
+# Overall, this is very similar to what we did before.
+
+# A new model.
+lm_intercept <-
+  linear_reg() |>
+  fit(
+    # This is the most important line in this code chunk!
+    flipper_length_mm~body_mass_g + species,
+    data = penguins |> filter(
+    !is.na(flipper_length_mm),
+    !is.na(body_mass_g),
+    !is.na(species))
+  )
+
+penguins <-
+  # Pull from the new model.
+  lm_intercept |>
+  augment(penguins) |>
+  select(
+    species,
+    island,
+    bill_length_mm,
+    bill_depth_mm,
+    flipper_length_mm,
+    sex,
+    year,
+    body_mass_g,
+    # Keeping the old model info.
+    pred_simple,
+    resid_simple,
+    pred_intercept = .pred,
+    resid_intercept = .resid
+  )
+
+output <-
+  penguins |>
+  filter(!is.na(resid_intercept)) |>
+  summarize(
+    avg_resid = mean(resid_intercept),
+    sd_resid = sd(resid_intercept),
+    lower_95 = avg_resid - 2*sd_resid,
+    upper_95 = avg_resid + 2*sd_resid
+  )
+
+penguins |>
+  filter(!is.na(resid_intercept)) |>
+  # Remember to use + to pipe in ggplot!
+  ggplot(aes(x = resid_intercept)) +
   geom_density() +
-  labs(title = "Distribution of Residuals (lm_ascent)")
+  geom_vline(aes(xintercept = output$lower_95), color = "red") +
+  geom_vline(aes(xintercept = output$upper_95), color = "red")
+
 ```
 
-And while that works, a more sensitive visualization is the Q-Q plot.
+- Our model is a bit more centered, but what have we done?
+- Hopefully, we have given each species a different intercept value.
 
-- Q-Q stands for Quantile-Quantile plot.
-- This is a graphical test to see if our data, residuals, come from a normal distribution.
-
-```{r}
-high_peaks_length |>
-  ggplot(aes(sample = .resid)) +
-  geom_qq() +
-  geom_qq_line() +
-  labs(title = "Distribution of Residuals (lm_length)")
-
-high_peaks_ascent |>
-  ggplot(aes(sample = .resid)) +
-  geom_qq() +
-  geom_qq_line() +
-  labs(title = "Distribution of Residuals (lm_ascent)")
-```
-
-- And the answer here is yes, because our residuals mostly fall along the 45 degree slope.
-
-## Homogeneity of variance
-
-We also want to see to test for homogeneity of variance (fancy term, simple idea).
 
 ```{r}
-high_peaks_length |>
-  ggplot(aes(x = .pred, y = .resid)) +
+
+colors <- scales::hue_pal()(3)
+
+tidy(lm_intercept)
+
+penguins |>
+  filter(
+    !is.na(flipper_length_mm),
+    !is.na(body_mass_g),
+    !is.na(species)
+  ) |>
+  ggplot(aes(x = body_mass_g, y = flipper_length_mm, color = species)) +
   geom_point() +
-  geom_smooth(method = lm) +
-  labs(title = "Distribution of Residuals (lm_length)")
+  # Our simple model regression line.
+  geom_abline(
+    aes(
+      intercept = lm_simple$fit$coefficients[1],
+      slope = lm_simple$fit$coefficients[2],
+      ),
+    color ="darkblue") +
+  # Regression line for Adelie penguins
+  geom_abline(
+    aes(
+      intercept = lm_intercept$fit$coefficients[1],
+      slope = lm_intercept$fit$coefficients[2],
+      ),
+    color = colors[1],
+    linewidth = 1.25) +
+  # Regression line for Chinstrap penguins
+  geom_abline(
+    aes(
+      intercept = lm_intercept$fit$coefficients[1] + lm_intercept$fit$coefficients[3],
+      slope = lm_intercept$fit$coefficients[2],
+      ),
+    color = colors[2],
+    linewidth = 1.25) +
+  # Regression line for Gentoo penguins
+  geom_abline(
+    aes(
+      intercept = lm_intercept$fit$coefficients[1] + lm_intercept$fit$coefficients[4],
+      slope = lm_intercept$fit$coefficients[2],
+      ),
+    color = colors[3],
+    linewidth = 1.25)
 
-high_peaks_ascent |>
-  ggplot(aes(x = .pred, y = .resid)) +
+```
+
+Now, let's give each species a different slope. To do so let's build a model
+using `:` in our formula, which we will call `lm_slope`. In this model, each
+species will have:
+
+- a different slope
+- the same intercept
+
+
+```{r}
+
+# Overall, this is very similar to what we did before.
+
+# A new model.
+lm_slope <-
+  linear_reg() |>
+  fit(
+    # This is the most important line in this code chunk!
+    flipper_length_mm~body_mass_g:species,
+    data = penguins |> filter(
+    !is.na(flipper_length_mm),
+    !is.na(body_mass_g),
+    !is.na(species))
+  )
+
+penguins <-
+  # Pull from the new model.
+  lm_slope |>
+  augment(penguins) |>
+  select(
+    species,
+    island,
+    bill_length_mm,
+    bill_depth_mm,
+    flipper_length_mm,
+    sex,
+    year,
+    body_mass_g,
+    # Keeping the old model info.
+    pred_simple,
+    resid_simple,
+    pred_intercept,
+    resid_intercept,
+    pred_slope = .pred,
+    resid_slope = .resid
+  )
+
+output <-
+  penguins |>
+  filter(!is.na(resid_slope)) |>
+  summarize(
+    avg_resid = mean(resid_slope),
+    sd_resid = sd(resid_slope),
+    lower_95 = avg_resid - 2*sd_resid,
+    upper_95 = avg_resid + 2*sd_resid
+  )
+
+penguins |>
+  filter(!is.na(resid_slope)) |>
+  # Remember to use + to pipe in ggplot!
+  ggplot(aes(x = resid_intercept)) +
+  geom_density() +
+  geom_vline(aes(xintercept = output$lower_95), color = "red") +
+  geom_vline(aes(xintercept = output$upper_95), color = "red")
+
+```
+
+- Our model is a bit more centered, but what have we done?
+- Hopefully, we have given each species a different slope.
+
+
+```{r}
+
+tidy(lm_slope)
+
+penguins |>
+  filter(
+    !is.na(flipper_length_mm),
+    !is.na(body_mass_g),
+    !is.na(species)
+  ) |>
+  ggplot(aes(x = body_mass_g, y = flipper_length_mm, color = species)) +
   geom_point() +
-  #geom_smooth(method = lm) +
-  labs(title = "Distribution of Residuals (lm_ascent)")
+  # Our simple model regression line.
+  geom_abline(
+    aes(
+      intercept = lm_simple$fit$coefficients[1],
+      slope = lm_simple$fit$coefficients[2],
+      ),
+    color ="darkblue") +
+  # Regression line for Adelie penguins
+  geom_abline(
+    aes(
+      intercept = lm_slope$fit$coefficients[1],
+      slope = lm_slope$fit$coefficients[2],
+      ),
+    color = colors[1],
+    linewidth = 1.25) +
+  # Regression line for Chinstrap penguins
+  geom_abline(
+    aes(
+      intercept = lm_slope$fit$coefficients[1],
+      slope = lm_slope$fit$coefficients[3],
+      ),
+    color = colors[2],
+    linewidth = 1.25) +
+  # Regression line for Gentoo penguins
+  geom_abline(
+    aes(
+      intercept = lm_slope$fit$coefficients[1],
+      slope = lm_slope$fit$coefficients[4],
+      ),
+    color = colors[3],
+    linewidth = 1.25)
 
 ```
 
-- You basically want to see random noise.
-- And we do, mostly.
+- Although not dramatically different, each species has a different slope.
 
+Finally, we will build a model using `+` and `:` in our formula, which we will
+call `lm_combined`. In this model, each species will have:
 
+- a different intercept
+- a different slope
+- reproducing what ggplot gave us
 
-# Multiple Linear Regression
-
-## Time ~ Length + Ascent
-
-- Multiple linear regression is a regression model that estimates the relationship between a quantitative dependent variable (time) and two or more independent variables using a straight line.
-- The independent variables should not be strongly correlated (Multicollinearity)
-  - This particular example is . . . kinda . . . meh.
 
 ```{r}
-ggplot(high_peaks, aes(y = length, x = ascent)) +
-  geom_point() #+
-  #geom_smooth(method = "lm")
-```
 
-```{r}
-cor.test(high_peaks$length, high_peaks$ascent)
-```
-
-
-So, since they aren't super-correlated, let's try it out. It makes sense intuitively.
-
-```{r}
-lm_length_ascent <-
+# A new model.
+lm_combined <-
   linear_reg() |>
-  fit(time ~ length + ascent, data = high_peaks)
-tidy(lm_length_ascent)
+  fit(
+    # This is the most important line in this code chunk!
+    flipper_length_mm~body_mass_g:species + species,
+    data = penguins |> filter(
+    !is.na(flipper_length_mm),
+    !is.na(body_mass_g),
+    !is.na(species))
+  )
+
+penguins <-
+  # Pull from the new model.
+  lm_combined |>
+  augment(penguins) |>
+  select(
+    species,
+    island,
+    bill_length_mm,
+    bill_depth_mm,
+    flipper_length_mm,
+    sex,
+    year,
+    body_mass_g,
+    # Keeping the old model info.
+    pred_simple,
+    resid_simple,
+    pred_intercept,
+    resid_intercept,
+    pred_combined = .pred,
+    resid_combined = .resid
+  )
+
+output <-
+  penguins |>
+  filter(!is.na(resid_combined)) |>
+  summarize(
+    avg_resid = mean(resid_combined),
+    sd_resid = sd(resid_combined),
+    lower_95 = avg_resid - 2*sd_resid,
+    upper_95 = avg_resid + 2*sd_resid
+  )
+
+penguins |>
+  filter(!is.na(resid_combined)) |>
+  # Remember to use + to pipe in ggplot!
+  ggplot(aes(x = resid_intercept)) +
+  geom_density() +
+  geom_vline(aes(xintercept = output$lower_95), color = "red") +
+  geom_vline(aes(xintercept = output$upper_95), color = "red")
+
 ```
 
-- Our estimates all changed.
-- This is the smallest intercept.
-  - Don't read much into that.
-- length: For every 1 mile in length, add .658 hours.
-- ascent: For every 1 foot in ascent, add 0.000305 hours.
+- Our model is a bit more centered, but what have we done?
+- Observe that we aren't really shrinking the standard deviation any here.
+
 
 ```{r}
-glance(lm_length_ascent)
+
+tidy(lm_combined)
+
+penguins |>
+  filter(
+    !is.na(flipper_length_mm),
+    !is.na(body_mass_g),
+    !is.na(species)
+  ) |>
+  ggplot(aes(x = body_mass_g, y = flipper_length_mm, color = species)) +
+  geom_point() +
+  # Our simple model regression line.
+  geom_abline(
+    aes(
+      intercept = lm_simple$fit$coefficients[1],
+      slope = lm_simple$fit$coefficients[2],
+      ),
+    color ="darkblue") +
+  # Regression line for Adelie penguins
+  geom_abline(
+    aes(
+      intercept = lm_combined$fit$coefficients[1],
+      slope = lm_combined$fit$coefficients[4],
+      ),
+    color = colors[1],
+    linewidth = 1.25) +
+  # Regression line for Chinstrap penguins
+  geom_abline(
+    aes(
+      intercept = lm_combined$fit$coefficients[1] + lm_combined$fit$coefficients[2],
+      slope = lm_combined$fit$coefficients[5],
+      ),
+    color = colors[2],
+    linewidth = 1.25) +
+  # Regression line for Gentoo penguins
+  geom_abline(
+    aes(
+      intercept = lm_combined$fit$coefficients[1] + lm_combined$fit$coefficients[3],
+      slope = lm_combined$fit$coefficients[6],
+      ),
+    color = colors[3],
+    linewidth = 1.25)
+
 ```
 
-- Notice that R Squared and Adjusted R Squared are starting to diverge.
-  - This is because Adjusted R Squared is penalized for adding more features.
-- And our sigma actually went up, slightly, which is not what we want.
-
-## Time ~ Length + Difficulty
+Which, if we now compare to the ggplot drawing, you can see that the biggest
+differences are the cut-off in the per-species lines, and the lack of a dark
+blue line for the `lm_simple` model.
 
 ```{r}
-ggplot(high_peaks, aes(y = length, x = difficulty)) +
-  geom_point() #+
-  #geom_smooth(method = "lm")
+
+penguins |>
+  filter(
+    !is.na(flipper_length_mm),
+    !is.na(body_mass_g),
+    !is.na(species)
+  ) |>
+  ggplot(aes(x = body_mass_g, y = flipper_length_mm, color = species)) +
+  geom_point() +
+  geom_smooth(method = lm)
+
 ```
-
-```{r}
-cor.test(high_peaks$length, high_peaks$difficulty)
-```
-
-This is honestly, borderline.
-
-```{r}
-lm_length_difficulty <-
-  linear_reg() |>
-  fit(time ~ length + difficulty, data = high_peaks)
-tidy(lm_length_difficulty)
-```
-
-- Our estimates all changed.
-- This is the smallest intercept.
-  - Don't read much into that.
-- length: For every 1 mile in length, add .658 hours.
-- ascent: For every 1 foot in ascent, add 0.000305 hours.
-
-```{r}
-glance(lm_length_difficulty)
-```
-
-- Adjusted R Squared is the more "conservative" estimate for how much variance is explained.
-- This time, our sigma went down, slightly.
-
-
-# Can you build a model with a lower sigma than 1.29?
-
-In Canvas, tell me what features you used and what the sigma was for your best model.

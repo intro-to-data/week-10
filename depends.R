@@ -3,14 +3,12 @@
 p <- c(
   "httpgd",
   "janitor",
+  "hexbin",
   "knitr",
-  "lubridate",
   "markdown",
-  "rmarkdown",
-  "shiny",
   "tidymodels",
   "tidyverse",
-  "Stat2Data"
+  
 )
 install.packages(p)
 
