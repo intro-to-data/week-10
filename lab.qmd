@@ -4,6 +4,7 @@ output: html_notebook
 ---
 
 
+
 # Goals
 
 - Continue exploring linear regression.
@@ -69,6 +70,7 @@ A data frame with 53940 rows and 10 variables:
 - x: length in mm (0-10.74)
 - y: width in mm (0-58.9)
 - z: depth in mm (0-31.8)
+
 
 
 # Lab Tasks
